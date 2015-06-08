@@ -24,19 +24,43 @@ namespace GuestBook_WebRole
 
         protected void Page_Load(object sender, EventArgs e)
         {
-			if (!Page.IsPostBack)
-			{
-				this.Timer1.Enabled = true;
-			}
+            if (!Page.IsPostBack)
+            {
+                this.Timer1.Enabled = true;
+            }
         }
 
         protected void SignButton_Click(object sender, EventArgs e)
         {
+            if (this.FileUpload1.HasFile)
+            {
+                this.InitializeStorage();
+
+                string uniqueBlobName = string.Format("image_{0}{1}",
+                    Guid.NewGuid().ToString(),
+                    Path.GetExtension(this.FileUpload1.FileName));
+                CloudBlockBlob blob =
+                    blobStorage.GetContainerReference("guestbookpics")
+                    .GetBlockBlobReference(uniqueBlobName);
+                blob.Properties.ContentType =
+                    this.FileUpload1.PostedFile.ContentType;
+                blob.UploadFromStream(this.FileUpload1.FileContent);
+
+                GuestBookEntry entry = new GuestBookEntry()
+                {
+                    GuestName = this.NameTextBox.Text,
+                    Message = this.MessageTextBox.Text,
+                    PhotoUrl = blob.Uri.ToString(),
+                    ThumbnailUrl = blob.Uri.ToString()
+                };
+                GuestBookDataSource ds = new GuestBookDataSource();
+                ds.AddGuestBookEntry(entry);
+            }
         }
 
         protected void Timer1_Tick(object sender, EventArgs e)
         {
-			this.DataList1.DataBind();
+            this.DataList1.DataBind();
         }
 
         private void InitializeStorage()
@@ -54,7 +78,7 @@ namespace GuestBook_WebRole
                 permissions.PublicAccess = BlobContainerPublicAccessType.Container;
                 container.SetPermissions(permissions);
 
-                storageInitialized = true; 
+                storageInitialized = true;
             }
         }
     }
