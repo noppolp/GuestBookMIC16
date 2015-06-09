@@ -55,6 +55,13 @@ namespace GuestBook_WebRole
                 };
                 GuestBookDataSource ds = new GuestBookDataSource();
                 ds.AddGuestBookEntry(entry);
+
+                var queue = queueStorage.GetQueueReference("guestthumbs");
+                var message = new CloudQueueMessage(string.Format("{0},{1},{2}",
+                    uniqueBlobName, 
+                    entry.PartitionKey,
+                    entry.RowKey));
+                queue.AddMessage(message);
             }
         }
 
@@ -77,6 +84,10 @@ namespace GuestBook_WebRole
                 var permissions = container.GetPermissions();
                 permissions.PublicAccess = BlobContainerPublicAccessType.Container;
                 container.SetPermissions(permissions);
+
+                queueStorage = storageAccount.CreateCloudQueueClient();
+                CloudQueue queue = queueStorage.GetQueueReference("guestthumbs");
+                queue.CreateIfNotExists();
 
                 storageInitialized = true;
             }
